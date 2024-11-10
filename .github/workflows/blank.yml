@@ -1,36 +1,74 @@
-# This is a basic workflow to help you get started with Actions
+name: CI/CD with SonarQube
 
-name: CI
-
-# Controls when the workflow will run
 on:
-  # Triggers the workflow on push or pull request events but only for the "main" branch
   push:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
-
-  # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  # This workflow contains a single job called "build"
+  # This job will be executed on the ubuntu-latest runner
   build:
-    # The type of runner that the job will run on
     runs-on: ubuntu-latest
+    environment: dev  # Default environment for this job (can be overridden for prod/staging jobs)
 
-    # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v4
+      # Checkout the code
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      # Runs a single command using the runners shell
+      # Run a one-line script
       - name: Run a one-line script
-        run: echo Hello, world!
+        run: echo "Hello, world!"
 
-      # Runs a set of commands using the runners shell
+      # Run a multi-line script
       - name: Run a multi-line script
         run: |
-          echo Add other actions to build,
-          echo test, and deploy your project.
+          echo "Add other actions to build, test, and deploy your project."
+
+      # SonarQube analysis step (only for dev, staging, and prod environments)
+      - name: SonarQube Scan
+        uses: SonarSource/sonarcloud-action@v1
+        with:
+          organization: ${{ secrets.SONAR_ORG }}  # Your SonarCloud organization
+          projectKey: ${{ secrets.SONAR_PROJECT_KEY }}  # Your SonarCloud project key
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}  # SonarQube token
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}  # SonarQube server URL (e.g., sonarcloud.io)
+
+      # Additional steps for deployment (if needed)
+      - name: Deploy to Development (Dev) environment
+        run: echo "Deploying to the Development Environment"
+        if: github.ref == 'refs/heads/main'
+
+  # Staging Job (if needed, it can have specific deployment steps for staging)
+  deploy_staging:
+    runs-on: ubuntu-latest
+    environment: staging  # Staging environment
+    needs: build  # Ensures that this job runs after the build job
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to Staging environment
+        run: |
+          echo "Deploying to Staging Environment"
+          # Add your deployment commands here (e.g., for AWS, Kubernetes, etc.)
+          
+  # Production Job (only trigger this job after successful Staging or as needed)
+  deploy_production:
+    runs-on: ubuntu-latest
+    environment: production  # Production environment
+    needs: deploy_staging  # Ensures this job runs after the staging job (for testing first)
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to Production environment
+        run: |
+          echo "Deploying to Production Environment"
+          # Add your deployment commands here (e.g., for AWS, Kubernetes, etc.)
+          

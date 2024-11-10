@@ -1,0 +1,55 @@
+name: CI/CD Pipeline with SonarQube Analysis
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout the code
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      # Step 2: Set up Java (if using a Java project, modify for your language)
+      - name: Set up JDK
+        uses: actions/setup-java@v2
+        with:
+          java-version: '11'  # Modify according to your project's needs
+
+      # Step 3: Cache dependencies (for performance)
+      - name: Cache Maven dependencies (if using Maven)
+        uses: actions/cache@v2
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
+      # Step 4: Install dependencies (for Java project)
+      - name: Install dependencies (for Maven)
+        run: mvn install -DskipTests
+
+      # Step 5: Run SonarQube analysis
+      - name: SonarQube Analysis
+        uses: SonarSource/sonarcloud-action@v1
+        with:
+          organization: ${{ secrets.SONAR_ORG }}  # Set your SonarCloud organization
+          projectKey: ${{ secrets.SONAR_PROJECT_KEY }}  # Set your project key
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}  # The SonarQube token stored in GitHub Secrets
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}  # The URL to your SonarQube instance (SonarCloud URL if using SonarCloud)
+
+      # Step 6: Run tests (optional, but it's good to run tests before deploying)
+      - name: Run tests
+        run: mvn test
+
+      # Step 7: Deploy (if applicable, add your deployment logic here)
+      - name: Deploy to Production
+        run: echo "Deploying to production"
